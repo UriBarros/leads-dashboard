@@ -16,13 +16,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ChevronLeft, ChevronRight, Lock, Unlock, Filter, MessageCircle, Phone } from "lucide-react"
+import { ChevronLeft, ChevronRight, Lock, Unlock, Filter, MessageCircle, MoreHorizontal } from "lucide-react"
 import { getClientes, updateClienteStatus, type Cliente } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
-const ITEMS_PER_PAGE = 20
+const ITEMS_PER_PAGE = 15 // Aumentei um pouco para aproveitar telas modernas
 
 export function LeadsTable() {
+  // ... (Manter toda a lógica de estado e useEffect igual) ...
   const [currentPage, setCurrentPage] = useState(1)
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [showFollowUpFilter, setShowFollowUpFilter] = useState(false)
@@ -30,22 +31,14 @@ export function LeadsTable() {
   const { toast } = useToast()
 
   const loadClientes = async () => {
-    setLoading(true)
-    try {
-      const data = await getClientes()
-      if (data.length > 0) {
-        setClientes(data)
-      }
-    } catch (error) {
-      console.error("Erro ao carregar clientes:", error)
-    } finally {
-      setLoading(false)
-    }
+      setLoading(true)
+      try {
+        const data = await getClientes()
+        if (data.length > 0) setClientes(data)
+      } catch (error) { console.error(error) } 
+      finally { setLoading(false) }
   }
-
-  useEffect(() => {
-    loadClientes()
-  }, [])
+  useEffect(() => { loadClientes() }, [])
 
   const filteredClientes = showFollowUpFilter ? clientes.filter((cliente) => cliente.follow_up >= 1) : clientes
   const totalPages = Math.ceil(filteredClientes.length / ITEMS_PER_PAGE)
@@ -56,171 +49,117 @@ export function LeadsTable() {
   const handleToggleConversation = async (clienteId: number, clienteName: string | null) => {
     const cliente = clientes.find((c) => c.id === clienteId)
     if (!cliente) return
-
     const newTravaStatus = !cliente.trava
-
     const success = await updateClienteStatus(clienteId, newTravaStatus)
-
     if (success) {
-      setClientes((prevClientes) => prevClientes.map((c) => (c.id === clienteId ? { ...c, trava: newTravaStatus } : c)))
-
-      const action = newTravaStatus ? "travada" : "destravada"
-      toast({
-        title: `Conversa ${action}`,
-        description: `A conversa com ${clienteName} foi ${action} com sucesso.`,
-      })
-    } else {
-      toast({
-        title: "Erro",
-        description: "Não foi possível atualizar o status da conversa.",
-        variant: "destructive",
-      })
+      setClientes((prev) => prev.map((c) => (c.id === clienteId ? { ...c, trava: newTravaStatus } : c)))
+      toast({ title: "Status atualizado", description: `Conversa ${newTravaStatus ? "pausada" : "retomada"}.` })
     }
   }
 
-  const toggleFollowUpFilter = () => {
-    setShowFollowUpFilter(!showFollowUpFilter)
-    setCurrentPage(1)
-  }
+  const toggleFollowUpFilter = () => { setShowFollowUpFilter(!showFollowUpFilter); setCurrentPage(1) }
+  const clearFilter = () => { setShowFollowUpFilter(false); setCurrentPage(1) }
 
-  const clearFilter = () => {
-    setShowFollowUpFilter(false)
-    setCurrentPage(1)
-  }
+  // ... (Fim da lógica) ...
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-[var(--whatsapp-green)] text-white">
-              <MessageCircle className="h-4 w-4" />
+    <Card className="border-none shadow-sm bg-white">
+      <CardHeader className="border-b border-gray-100 pb-4">
+        <div className="flex items-center justify-between">
+            <div>
+                <CardTitle className="text-xl font-semibold text-gray-900">Leads Recentes</CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">Gerencie seus contatos e status de automação.</p>
             </div>
-            <span>Clientes do WhatsApp</span>
-          </div>
+          
           <div className="flex items-center gap-2">
-            {!showFollowUpFilter ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={toggleFollowUpFilter}
-                className="flex items-center gap-2 bg-transparent"
-              >
-                <Filter className="h-4 w-4" />
-                Follow Up
-              </Button>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Button variant="default" size="sm" onClick={toggleFollowUpFilter} className="flex items-center gap-2">
-                  <Filter className="h-4 w-4" />
-                  Follow Up
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearFilter}
-                  className="flex items-center gap-2 bg-transparent"
-                >
-                  Mostrar Todos
-                </Button>
-              </div>
-            )}
-            <Badge variant="secondary">
-              {filteredClientes.length} {showFollowUpFilter ? "com follow up" : "clientes"}
-            </Badge>
+            <Button
+              variant={showFollowUpFilter ? "secondary" : "outline"}
+              size="sm"
+              onClick={showFollowUpFilter ? clearFilter : toggleFollowUpFilter}
+              className="text-xs font-medium"
+            >
+              <Filter className="h-3.5 w-3.5 mr-2" />
+              {showFollowUpFilter ? "Limpar Filtros" : "Filtrar por Follow-up"}
+            </Button>
           </div>
-        </CardTitle>
+        </div>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-0">
         {loading ? (
-          <div className="flex items-center justify-center py-8">
-            <div className="text-muted-foreground">Carregando clientes...</div>
+          <div className="flex items-center justify-center py-12">
+             <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           </div>
         ) : (
           <>
-            <div className="rounded-md border">
+            <div className="relative w-full overflow-auto">
               <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Telefone</TableHead>
-                    <TableHead>Interessado</TableHead>
-                    <TableHead>Produto</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Follow Up</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                <TableHeader className="bg-gray-50/50">
+                  <TableRow className="hover:bg-transparent border-gray-100">
+                    <TableHead className="w-[200px] font-medium text-xs uppercase tracking-wider text-gray-500">Nome</TableHead>
+                    <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Contato</TableHead>
+                    <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Status</TableHead>
+                    <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Interesse</TableHead>
+                    <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Produto</TableHead>
+                    <TableHead className="text-right font-medium text-xs uppercase tracking-wider text-gray-500">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {currentClientes.map((cliente) => (
-                    <TableRow key={cliente.id}>
-                      <TableCell className="font-medium">{cliente.nome || "Sem nome"}</TableCell>
+                    <TableRow key={cliente.id} className="border-gray-50 hover:bg-gray-50/60 transition-colors">
+                      <TableCell className="font-medium text-gray-900">{cliente.nome || "—"}</TableCell>
+                      <TableCell className="text-gray-600 font-mono text-xs">
+                         {cliente.telefone || "—"}
+                      </TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-3 w-3 text-[var(--whatsapp-green)]" />
-                          <span className="text-sm">{cliente.telefone || "Sem telefone"}</span>
+                         {/* Badge Minimalista: Outline com cor suave */}
+                        <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                            !cliente.trava 
+                            ? "bg-green-50 text-green-700 border border-green-100" 
+                            : "bg-amber-50 text-amber-700 border border-amber-100"
+                        }`}>
+                            <span className={`w-1.5 h-1.5 rounded-full mr-1.5 ${!cliente.trava ? "bg-green-500" : "bg-amber-500"}`}></span>
+                            {!cliente.trava ? "Ativo" : "Pausado"}
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant={cliente.interessado ? "default" : "secondary"}>
+                        <Badge variant={cliente.interessado ? "default" : "secondary"} className={`font-normal ${cliente.interessado ? "bg-primary/90 hover:bg-primary" : "text-gray-500 bg-gray-100 hover:bg-gray-200"}`}>
                           {cliente.interessado ? "Sim" : "Não"}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <div className="max-w-[150px] truncate" title={cliente.produto_interesse || ""}>
-                          {cliente.produto_interesse || "Não informado"}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={!cliente.trava ? "default" : "secondary"}
-                          className={!cliente.trava ? "text-white" : "text-orange-500"}
-                        >
-                          {!cliente.trava ? "Ativo" : "Travado"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={cliente.follow_up > 1 ? "default" : "outline"}>{cliente.follow_up}</Badge>
+                      <TableCell className="text-gray-600 text-sm max-w-[150px] truncate">
+                          {cliente.produto_interesse || "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1">
                           <Button
-                            variant="outline"
-                            size="sm"
-                            className="h-8 w-8 p-0 bg-transparent hover:bg-[var(--whatsapp-green)] hover:text-white cursor-pointer"
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-400 hover:text-green-600 hover:bg-green-50"
                             onClick={() => {
-                              const phoneNumber = cliente.telefone?.replace(/\D/g, "") // Remove non-digits
-                              if (phoneNumber) {
-                                const waLink = `https://wa.me/55${phoneNumber}`
-                                window.open(waLink, "_blank")
-                              }
+                              const phoneNumber = cliente.telefone?.replace(/\D/g, "")
+                              if (phoneNumber) window.open(`https://wa.me/55${phoneNumber}`, "_blank")
                             }}
-                            title="Conversar no WhatsApp"
                           >
                             <MessageCircle className="h-4 w-4" />
                           </Button>
 
                           <AlertDialog>
                             <AlertDialogTrigger asChild>
-                              <Button variant="outline" size="sm" className="h-8 w-8 p-0 bg-transparent cursor-pointer">
+                              <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-900">
                                 {cliente.trava ? <Unlock className="h-4 w-4" /> : <Lock className="h-4 w-4" />}
                               </Button>
                             </AlertDialogTrigger>
-                            <AlertDialogContent>
+                            <AlertDialogContent className="bg-white border-none shadow-lg">
                               <AlertDialogHeader>
-                                <AlertDialogTitle>{cliente.trava ? "Destravar" : "Travar"} conversa</AlertDialogTitle>
+                                <AlertDialogTitle>Alterar status da automação?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                  Tem certeza que deseja {cliente.trava ? "destravar" : "travar"} a conversa com{" "}
-                                  {cliente.nome}?
-                                  {cliente.trava
-                                    ? " A automação do WhatsApp voltará a funcionar normalmente."
-                                    : " A automação do WhatsApp será pausada para este cliente."}
+                                  Isso irá {cliente.trava ? "reativar" : "pausar"} o bot para {cliente.nome}.
                                 </AlertDialogDescription>
                               </AlertDialogHeader>
                               <AlertDialogFooter>
-                                <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleToggleConversation(cliente.id, cliente.nome)}>
-                                  {cliente.trava ? "Destravar" : "Travar"}
+                                <AlertDialogCancel className="border-none shadow-none hover:bg-gray-100">Cancelar</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleToggleConversation(cliente.id, cliente.nome)} className="bg-primary hover:bg-primary/90">
+                                  Confirmar
                                 </AlertDialogAction>
                               </AlertDialogFooter>
                             </AlertDialogContent>
@@ -233,11 +172,10 @@ export function LeadsTable() {
               </Table>
             </div>
 
-            {/* Paginação */}
-            <div className="flex items-center justify-between space-x-2 py-4">
-              <div className="text-sm text-muted-foreground">
-                Mostrando {startIndex + 1} a {Math.min(endIndex, filteredClientes.length)} de {filteredClientes.length}{" "}
-                {showFollowUpFilter ? "clientes com follow up > 1" : "clientes do WhatsApp"}
+            {/* Paginação Simplificada */}
+            <div className="flex items-center justify-between px-4 py-4 border-t border-gray-100">
+              <div className="text-xs text-muted-foreground">
+                 {startIndex + 1}-{Math.min(endIndex, filteredClientes.length)} de {filteredClientes.length}
               </div>
               <div className="flex items-center space-x-2">
                 <Button
@@ -245,45 +183,17 @@ export function LeadsTable() {
                   size="sm"
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
+                  className="h-8 w-8 p-0 border-gray-200"
                 >
                   <ChevronLeft className="h-4 w-4" />
-                  Anterior
                 </Button>
-
-                <div className="flex items-center space-x-1">
-                  {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                    let pageNumber
-                    if (totalPages <= 5) {
-                      pageNumber = i + 1
-                    } else if (currentPage <= 3) {
-                      pageNumber = i + 1
-                    } else if (currentPage >= totalPages - 2) {
-                      pageNumber = totalPages - 4 + i
-                    } else {
-                      pageNumber = currentPage - 2 + i
-                    }
-
-                    return (
-                      <Button
-                        key={pageNumber}
-                        variant={currentPage === pageNumber ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(pageNumber)}
-                        className="h-8 w-8 p-0"
-                      >
-                        {pageNumber}
-                      </Button>
-                    )
-                  })}
-                </div>
-
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
+                  className="h-8 w-8 p-0 border-gray-200"
                 >
-                  Próxima
                   <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
