@@ -16,14 +16,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ChevronLeft, ChevronRight, Lock, Unlock, Filter, MessageCircle, MoreHorizontal } from "lucide-react"
+import { ChevronLeft, ChevronRight, Lock, Unlock, Filter, MessageCircle } from "lucide-react"
 import { getClientes, updateClienteStatus, type Cliente } from "@/lib/supabase"
 import { useToast } from "@/hooks/use-toast"
 
-const ITEMS_PER_PAGE = 15 // Aumentei um pouco para aproveitar telas modernas
+const ITEMS_PER_PAGE = 15
 
 export function LeadsTable() {
-  // ... (Manter toda a lógica de estado e useEffect igual) ...
   const [currentPage, setCurrentPage] = useState(1)
   const [clientes, setClientes] = useState<Cliente[]>([])
   const [showFollowUpFilter, setShowFollowUpFilter] = useState(false)
@@ -59,8 +58,6 @@ export function LeadsTable() {
 
   const toggleFollowUpFilter = () => { setShowFollowUpFilter(!showFollowUpFilter); setCurrentPage(1) }
   const clearFilter = () => { setShowFollowUpFilter(false); setCurrentPage(1) }
-
-  // ... (Fim da lógica) ...
 
   return (
     <Card className="border-none shadow-sm bg-white">
@@ -100,6 +97,8 @@ export function LeadsTable() {
                     <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Status</TableHead>
                     <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Interesse</TableHead>
                     <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Produto</TableHead>
+                    {/* NOVA COLUNA ADICIONADA AQUI: */}
+                    <TableHead className="font-medium text-xs uppercase tracking-wider text-gray-500">Follow Up</TableHead>
                     <TableHead className="text-right font-medium text-xs uppercase tracking-wider text-gray-500">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -111,7 +110,6 @@ export function LeadsTable() {
                          {cliente.telefone || "—"}
                       </TableCell>
                       <TableCell>
-                         {/* Badge Minimalista: Outline com cor suave */}
                         <div className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
                             !cliente.trava 
                             ? "bg-green-50 text-green-700 border border-green-100" 
@@ -129,6 +127,12 @@ export function LeadsTable() {
                       <TableCell className="text-gray-600 text-sm max-w-[150px] truncate">
                           {cliente.produto_interesse || "—"}
                       </TableCell>
+                      
+                      {/* NOVA CÉLULA ADICIONADA AQUI: */}
+                      <TableCell className="text-gray-600 text-sm">
+                          {cliente.follow_up || 0}
+                      </TableCell>
+
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Button
@@ -172,7 +176,6 @@ export function LeadsTable() {
               </Table>
             </div>
 
-            {/* Paginação Simplificada */}
             <div className="flex items-center justify-between px-4 py-4 border-t border-gray-100">
               <div className="text-xs text-muted-foreground">
                  {startIndex + 1}-{Math.min(endIndex, filteredClientes.length)} de {filteredClientes.length}
